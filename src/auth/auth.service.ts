@@ -1,7 +1,6 @@
 import {
   Injectable,
   UnauthorizedException,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,38 +9,25 @@ import { Repository } from 'typeorm';
 import { User, UserStatus } from '../entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly usersService: UsersService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<{ user: Partial<User>; token: string }> {
-    // Check if user already exists
-    const existingUser = await this.userRepository.findOne({
-      where: { email: registerDto.email },
-    });
+  async register(
+    registerDto: RegisterDto,
+  ): Promise<{ user: Partial<User>; token: string }> {
+    const user = await this.usersService.create(registerDto);
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
-
-    // Create new user
-    const user = this.userRepository.create({
-      ...registerDto,
-      dateOfBirth: registerDto.dateOfBirth ? new Date(registerDto.dateOfBirth) : null,
-    });
-
-    await this.userRepository.save(user);
-
-    // Generate JWT token
     const token = this.generateToken(user);
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = user;
+    const { ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
@@ -49,7 +35,9 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<{ user: Partial<User>; token: string }> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ user: Partial<User>; token: string }> {
     const user = await this.userRepository.findOne({
       where: { email: loginDto.email },
     });
@@ -68,7 +56,7 @@ export class AuthService {
     }
 
     const token = this.generateToken(user);
-    const { password, ...userWithoutPassword } = user;
+    const { ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,

@@ -10,14 +10,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private authService: AuthService,
   ) {
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: secret,
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: { sub: number }) {
     const user = await this.authService.validateUser(payload.sub);
     if (!user) {
       throw new UnauthorizedException();

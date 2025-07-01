@@ -22,8 +22,7 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  async getProfile(@CurrentUser() user: User) {
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+  getProfile(@CurrentUser() user: User) {
+    return user;
   }
 }
