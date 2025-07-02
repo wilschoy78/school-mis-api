@@ -18,7 +18,7 @@ import { UsersModule } from './users/users.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+        entities: [__dirname + '/../dist/**/*.entity.js'],
         synchronize: configService.get('NODE_ENV') !== 'production',
       }),
       inject: [ConfigService],
