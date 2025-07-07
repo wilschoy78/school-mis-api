@@ -11,6 +11,7 @@ import * as bcrypt from 'bcryptjs';
 
 export enum UserRole {
   ADMIN = 'admin',
+  STAFF = 'staff',
   REGISTRAR = 'registrar',
   TEACHER = 'teacher',
   STUDENT = 'student',
@@ -48,11 +49,11 @@ export class User {
   phone: string;
 
   @Column({
-    type: 'enum',
+    type: 'set',
     enum: UserRole,
-    default: UserRole.STUDENT,
+    default: [UserRole.STAFF],
   })
-  role: UserRole;
+  roles: UserRole[];
 
   @Column({
     type: 'enum',
@@ -75,6 +76,9 @@ export class User {
 
   @Column({ nullable: true })
   profilePicture: string;
+
+  @Column({ nullable: true })
+  department: string;
 
   @CreateDateColumn()
   createdAt: Date;

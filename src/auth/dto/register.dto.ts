@@ -38,9 +38,9 @@ export class RegisterDto {
   @IsPhoneNumber('PH')
   phone?: string;
 
-  @ApiProperty({ enum: UserRole, description: 'User role' })
-  @IsEnum(UserRole)
-  role: UserRole;
+  @ApiProperty({ enum: UserRole, isArray: true, description: 'User roles' })
+  @IsEnum(UserRole, { each: true })
+  roles: UserRole[];
 
   @ApiProperty({ example: 'EMP-001', description: 'Employee ID', required: false })
   @IsOptional()
@@ -61,4 +61,9 @@ export class RegisterDto {
   @IsOptional()
   @IsDateString()
   dateOfBirth?: string;
+
+  @ApiProperty({ example: 'Administration', description: 'User department', required: false })
+  @IsOptional()
+  @IsString()
+  department?: string;
 }

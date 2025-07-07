@@ -31,16 +31,16 @@ export class UsersController {
   @ApiOperation({ summary: 'Get all users with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'role', required: false, enum: UserRole })
+  @ApiQuery({ name: 'roles', required: false, enum: UserRole, isArray: true })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Return all users.' })
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('role') role?: UserRole,
+    @Query('roles') roles?: UserRole[] | 'all',
     @Query('search') search?: string,
   ) {
-    return this.usersService.findAllPaginated(page, limit, role, search);
+    return this.usersService.findAllPaginated(page, limit, roles, search);
   }
 
   @Get(':id')

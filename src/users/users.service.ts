@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { User, UserRole, UserStatus } from '../entities/user.entity';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -49,18 +49,20 @@ export class UsersService {
   async findAllPaginated(
     page: number,
     limit: number,
-    role?: UserRole | 'all',
+    roles?: UserRole[] | 'all',
     search?: string,
   ): Promise<{ users: Partial<User>[]; total: number }> {
     const queryBuilder = this.userRepository.createQueryBuilder('user');
 
-    if (role && role !== 'all') {
-      queryBuilder.andWhere('user.role = :role', { role });
+    if (roles && roles !== 'all' && roles.length > 0) {
+      queryBuilder.andWhere('JSON_CONTAINS(user.roles, :roles)', {
+        roles: JSON.stringify(roles),
+      });
     }
 
     if (search) {
       queryBuilder.andWhere(
-        '(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search OR LOWER(user.email) LIKE :search OR LOWER(user.username) LIKE :search)',
+        '(LOWER(user.firstName) LIKE :search OR LOWER(user.lastName) LIKE :search OR LOWER(user.email) LIKE :search)',
         { search: `%${search.toLowerCase()}%` },
       );
     }
@@ -86,6 +88,7 @@ export class UsersService {
 
     const newUser = this.userRepository.create({
       ...createUserDto,
+      roles: createUserDto.roles || [UserRole.STUDENT], // Default role for new users
       status: UserStatus.ACTIVE, // Default status for new users
     });
 
@@ -110,7 +113,12 @@ export class UsersService {
       }
     }
 
-    Object.assign(user, updateUserDto);
+    // Ensure roles are handled correctly, if provided
+    if (updateUserDto.roles) {
+      user.roles = updateUserDto.roles;
+    }
+    // Assign other properties
+    Object.assign(user, { ...updateUserDto, roles: undefined }); // Exclude roles from direct assign to avoid conflict
     await this.userRepository.save(user);
 
     const { ...userWithoutPassword } = user;

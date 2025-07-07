@@ -21,11 +21,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: number }) {
+  async validate(payload: { sub: number; roles: string[] }) {
     const user = await this.authService.validateUser(payload.sub);
     if (!user) {
       throw new UnauthorizedException();
     }
-    return user;
+    return { ...user, roles: payload.roles };
   }
 }
