@@ -1,12 +1,13 @@
 import { PartialType } from '@nestjs/swagger';
 import { RegisterDto } from '../../auth/dto/register.dto';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { UserStatus } from '../../entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateUserDto extends PartialType(RegisterDto) {
-  @ApiProperty({ enum: UserStatus, required: false })
+  @ApiProperty({ example: 'password123', description: 'User password' })
   @IsOptional()
-  @IsEnum(UserStatus)
-  status?: UserStatus;
+  @IsString()
+  @MinLength(8)
+  password?: string;
 }

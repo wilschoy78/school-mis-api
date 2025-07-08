@@ -17,7 +17,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../entities/user.entity';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -27,7 +34,7 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.REGISTRAR)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.REGISTRAR)
   @ApiOperation({ summary: 'Get all users with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -37,14 +44,30 @@ export class UsersController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('roles') roles?: UserRole[] | 'all',
+    @Query('roles') roles?: UserRole[] | 'all' | string,
     @Query('search') search?: string,
   ) {
-    return this.usersService.findAllPaginated(page, limit, roles, search);
+    // Parse roles if it's a JSON string
+    let parsedRoles: UserRole[] | 'all' = 'all'; // Default to 'all'
+    
+    if (roles === 'all' || !roles) {
+      parsedRoles = 'all';
+    } else if (typeof roles === 'string') {
+      try {
+        parsedRoles = JSON.parse(roles);
+      } catch (e) {
+        // If parsing fails, treat as 'all'
+        parsedRoles = 'all';
+      }
+    } else {
+      parsedRoles = roles as UserRole[];
+    }
+    
+    return this.usersService.findAllPaginated(page, limit, parsedRoles, search);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.REGISTRAR)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.REGISTRAR)
   @ApiOperation({ summary: 'Get a single user by ID' })
   @ApiResponse({ status: 200, description: 'Return a single user.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
@@ -53,7 +76,7 @@ export class UsersController {
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update user status' })
   @ApiResponse({ status: 200, description: 'User status successfully updated.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
@@ -65,7 +88,7 @@ export class UsersController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User successfully created.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
@@ -74,7 +97,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update a user' })
   @ApiResponse({ status: 200, description: 'User successfully updated.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
@@ -82,8 +105,22 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Patch(':id/password')
+  @ApiOperation({ summary: 'Update user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'User password successfully updated.',
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async updatePassword(
+    @Param('id') id: number,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    return this.usersService.updatePassword(id, updatePasswordDto.password);
+  }
+
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete a user' })
   @ApiResponse({ status: 200, description: 'User successfully deleted.' })
   @ApiResponse({ status: 404, description: 'User not found.' })

@@ -10,6 +10,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 
 export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
   STAFF = 'staff',
   REGISTRAR = 'registrar',
@@ -86,8 +87,13 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column({ default: true })
+  mustChangePassword: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastLoginAt: Date;
+
   @BeforeInsert()
-  @BeforeUpdate()
   async hashPassword() {
     if (this.password) {
       this.password = await bcrypt.hash(this.password, 12);

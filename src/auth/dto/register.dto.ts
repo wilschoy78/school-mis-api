@@ -7,18 +7,13 @@ import {
   IsPhoneNumber,
   IsDateString,
 } from 'class-validator';
-import { UserRole } from '../../entities/user.entity';
+import { UserRole, UserStatus } from '../../entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
   @ApiProperty({ example: 'test@example.com', description: 'User email' })
   @IsEmail()
   email: string;
-
-  @ApiProperty({ example: 'password123', description: 'User password' })
-  @IsString()
-  @MinLength(8)
-  password: string;
 
   @ApiProperty({ example: 'John', description: 'User first name' })
   @IsString()
@@ -66,4 +61,9 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   department?: string;
+
+  @ApiProperty({ enum: UserStatus, required: false })
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 }

@@ -23,11 +23,16 @@ export class AuthService {
   async register(
     registerDto: RegisterDto,
   ): Promise<{ user: Partial<User>; token: string }> {
-    const user = await this.usersService.create(registerDto);
+    const defaultPassword = Math.random().toString(36).slice(-8);
+    const user = await this.usersService.create({
+      ...registerDto,
+      password: defaultPassword,
+    });
 
     const token = this.generateToken(user);
 
-    const { ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
@@ -37,30 +42,38 @@ export class AuthService {
 
   async login(
     loginDto: LoginDto,
-  ): Promise<{ user: Partial<User>; token: string }> {
+  ): Promise<{ user: Partial<User>; token: string; mustChangePassword: boolean }> {
     const user = await this.userRepository.findOne({
       where: { email: loginDto.email },
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is not active');
+      throw new UnauthorizedException(
+        'User is not active. Contact the System Administrator.',
+      );
     }
 
     const isPasswordValid = await user.validatePassword(loginDto.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
+    await this.userRepository.update(user.id, {
+      lastLoginAt: new Date(),
+    });
+
     const token = this.generateToken(user);
-    const { ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
 
     return {
       user: userWithoutPassword,
       token,
+      mustChangePassword: user.mustChangePassword,
     };
   }
 

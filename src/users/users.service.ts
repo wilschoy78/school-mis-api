@@ -17,7 +17,12 @@ export class UsersService {
   ) {}
 
   async findAll(): Promise<Partial<User>[]> {
-    const users = await this.userRepository.find();
+    const users = await this.userRepository
+      .createQueryBuilder('user')
+      .where('NOT FIND_IN_SET(:role, user.roles)', {
+        role: UserRole.SUPER_ADMIN,
+      })
+      .getMany();
     return users.map(({ ...user }) => user);
   }
 
@@ -55,9 +60,14 @@ export class UsersService {
     const queryBuilder = this.userRepository.createQueryBuilder('user');
 
     if (roles && roles !== 'all' && roles.length > 0) {
-      queryBuilder.andWhere('JSON_CONTAINS(user.roles, :roles)', {
-        roles: JSON.stringify(roles),
+      // Use a more reliable approach for role filtering
+      const roleConditions = roles.map((role, index) => `FIND_IN_SET(:role${index}, user.roles) > 0`);
+      const roleParams: any = {};
+      roles.forEach((role, index) => {
+        roleParams[`role${index}`] = role;
       });
+      
+      queryBuilder.andWhere(`(${roleConditions.join(' OR ')})`, roleParams);
     }
 
     if (search) {
@@ -66,6 +76,10 @@ export class UsersService {
         { search: `%${search.toLowerCase()}%` },
       );
     }
+
+    queryBuilder.andWhere('NOT FIND_IN_SET(:role, user.roles)', {
+      role: UserRole.SUPER_ADMIN,
+    });
 
     const [users, total] = await queryBuilder
       .skip((page - 1) * limit)
@@ -78,7 +92,9 @@ export class UsersService {
     };
   }
 
-  async create(createUserDto: RegisterDto): Promise<User> {
+  async create(
+    createUserDto: RegisterDto & { password?: string },
+  ): Promise<User> {
     const existingUser = await this.userRepository.findOne({
       where: { email: createUserDto.email },
     });
@@ -86,10 +102,13 @@ export class UsersService {
       throw new ConflictException('Email already registered');
     }
 
+    const password = createUserDto.password || 'new.user.pass';
+
     const newUser = this.userRepository.create({
       ...createUserDto,
-      roles: createUserDto.roles || [UserRole.STUDENT], // Default role for new users
-      status: UserStatus.ACTIVE, // Default status for new users
+      password,
+      roles: createUserDto.roles || [UserRole.STAFF],
+      status: UserStatus.ACTIVE,
     });
 
     return this.userRepository.save(newUser);
@@ -117,8 +136,13 @@ export class UsersService {
     if (updateUserDto.roles) {
       user.roles = updateUserDto.roles;
     }
-    // Assign other properties
-    Object.assign(user, { ...updateUserDto, roles: undefined }); // Exclude roles from direct assign to avoid conflict
+
+    if (updateUserDto.password) {
+      user.password = updateUserDto.password;
+      await user.hashPassword();
+    }
+
+    Object.assign(user, updateUserDto);
     await this.userRepository.save(user);
 
     const { ...userWithoutPassword } = user;
@@ -130,5 +154,22 @@ export class UsersService {
     if (result.affected === 0) {
       throw new NotFoundException('User not found');
     }
+  }
+
+  async updatePassword(
+    id: number,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.hashPassword();
+    await this.userRepository.save(user);
+
+    return { message: 'Password updated successfully' };
   }
 }
