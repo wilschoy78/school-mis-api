@@ -81,6 +81,22 @@ export class User {
   @Column({ nullable: true })
   department: string;
 
+  // Employee-specific fields
+  @Column({ nullable: true })
+  position: string;
+
+  @Column({ type: 'date', nullable: true })
+  hireDate: Date;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  salary: number;
+
+  @Column({ nullable: true })
+  emergencyContact: string;
+
+  @Column({ nullable: true })
+  emergencyPhone: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

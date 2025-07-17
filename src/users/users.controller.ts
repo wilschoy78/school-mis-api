@@ -7,7 +7,6 @@ import {
   UseGuards,
   Query,
   Post,
-  Delete,
   Put,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -119,12 +118,31 @@ export class UsersController {
     return this.usersService.updatePassword(id, updatePasswordDto.password);
   }
 
-  @Delete(':id')
+  // Employee-specific endpoints
+  @Get('employees/list')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.STAFF)
+  @ApiOperation({ summary: 'Get all employees with pagination and filtering' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'department', required: false, type: String })
+  @ApiQuery({ name: 'position', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Return all employees.' })
+  async findAllEmployees(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('department') department?: string,
+    @Query('position') position?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAllEmployees(page, limit, department, position, search);
+  }
+
+  @Get('employees/stats')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a user' })
-  @ApiResponse({ status: 200, description: 'User successfully deleted.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  async remove(@Param('id') id: number) {
-    return this.usersService.remove(id);
+  @ApiOperation({ summary: 'Get employee statistics' })
+  @ApiResponse({ status: 200, description: 'Return employee statistics.' })
+  async getEmployeeStats() {
+    return this.usersService.getEmployeeStats();
   }
 }
